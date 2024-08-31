@@ -44,9 +44,9 @@ class AdaptiveRenkoStrategy(IStrategy):
     
     INTERFACE_VERSION = 3
 
-    timeframe = '3m'
+    timeframe = '5m'
     timeframe_minutes = timeframe_to_minutes(timeframe)
-    can_short: bool = True
+    can_short: bool = False
     trailing_stop = False
     startup_candle_count: int = 7*2
     use_exit_signal = True
@@ -62,6 +62,7 @@ class AdaptiveRenkoStrategy(IStrategy):
         informative_pairs = [(pair, '15m') for pair in pairs]
         return informative_pairs
         
+
     def populate_indicators(self, dataframe: DataFrame, metadata: dict) -> DataFrame:
         inf_tf = '15m'
         informative = self.dp.get_pair_dataframe(pair=metadata['pair'], timeframe=inf_tf)
@@ -78,7 +79,7 @@ class AdaptiveRenkoStrategy(IStrategy):
             opt_bs = opt.fminbound(lambda x: -evaluate_renko(brick=x, history=dataframe.close, column_name='score'), np.min(dataframe['atr_15m']), np.max(dataframe['atr_15m']), disp=0)
             # Create a new pyrenko.renko() object for the pair with the optimized brick size and add it to the custom_renkodict dictionary
             self.custom_renkodict[metadata['pair']].set_brick_size(brick_size=opt_bs, auto=False)
-            self.custom_renkodict[metadata['pair']].build_history(prices=dataframe.close.tolist())
+            self.custom_renkodict[metadata['pair']].build_history(prices=dataframe.close)
             logger.info(f'Created a new pyrenko.renko() object for pair {metadata["pair"]}')
         
         # Get the renko object for the given pair from custom_renkodict    
@@ -100,7 +101,7 @@ class AdaptiveRenkoStrategy(IStrategy):
             if num_created_bars != 0:
                 # If the previous brick direction is not the same as the last brick direction
                 if self.prev_brick_direction != self.last_brick_direction:
-                    opt_bs = opt.fminbound(lambda x: -evaluate_renko(brick=x, history=dataframe.close.tolist(), column_name='score'), np.min(dataframe['atr_15m']), np.max(dataframe['atr_15m']), disp=0)
+                    opt_bs = opt.fminbound(lambda x: -evaluate_renko(brick=x, history=dataframe.close, column_name='score'), np.min(dataframe['atr_15m']), np.max(dataframe['atr_15m']), disp=0)
                     if opt_bs != renko_obj.brick_size:
                         renko_obj.set_brick_size(brick_size=opt_bs, auto=False)
                         self.opt_bs = opt_bs
